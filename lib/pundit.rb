@@ -3,7 +3,6 @@ require "pundit/policy_finder"
 require "active_support/concern"
 require "active_support/core_ext/string/inflections"
 require "active_support/core_ext/object/blank"
-require "active_support/dependencies/autoload"
 
 module Pundit
   class NotAuthorizedError < StandardError
@@ -24,13 +23,13 @@ module Pundit
       PolicyFinder.new(scope).scope!.new(user, scope).resolve
     end
 
-    def policy(user, record)
+    def policy(user, record, *args)
       policy = PolicyFinder.new(record).policy
-      policy.new(user, record) if policy
+      policy.new(user, record, *args) if policy
     end
 
-    def policy!(user, record)
-      PolicyFinder.new(record).policy!.new(user, record)
+    def policy!(user, record, *args)
+      PolicyFinder.new(record).policy!.new(user, record, *args)
     end
   end
 
@@ -60,11 +59,11 @@ module Pundit
     raise AuthorizationNotPerformedError unless @_policy_scoped
   end
 
-  def authorize(record, query=nil)
+  def authorize(record, query=nil, *args)
     query ||= params[:action].to_s + "?"
     @_policy_authorized = true
 
-    policy = policy(record)
+    policy = policy(record, *args)
     unless policy.public_send(query)
       error = NotAuthorizedError.new("not allowed to #{query} this #{record}")
       error.query, error.record, error.policy = query, record, policy
@@ -81,8 +80,8 @@ module Pundit
   end
   attr_writer :policy_scope
 
-  def policy(record)
-    @policy or Pundit.policy!(pundit_user, record)
+  def policy(record, *args)
+    @policy or Pundit.policy!(pundit_user, record, *args)
   end
   attr_writer :policy
 
