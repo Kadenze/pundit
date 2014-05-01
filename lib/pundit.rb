@@ -122,9 +122,9 @@ module Pundit
     # @param record [Object] the object we're retrieving the policy for
     # @raise [InvalidConstructorError] if the policy constructor called incorrectly
     # @return [Object, nil] instance of policy class with query methods
-    def policy(user, record)
+    def policy(user, record, *args)
       policy = PolicyFinder.new(record).policy
-      policy.new(user, pundit_model(record)) if policy
+      policy.new(user, pundit_model(record), *args) if policy
     rescue ArgumentError
       raise InvalidConstructorError, "Invalid #<#{policy}> constructor is called"
     end
@@ -137,9 +137,9 @@ module Pundit
     # @raise [NotDefinedError] if the policy cannot be found
     # @raise [InvalidConstructorError] if the policy constructor called incorrectly
     # @return [Object] instance of policy class with query methods
-    def policy!(user, record)
+    def policy!(user, record, *args)
       policy = PolicyFinder.new(record).policy!
-      policy.new(user, pundit_model(record))
+      policy.new(user, pundit_model(record), *args)
     rescue ArgumentError
       raise InvalidConstructorError, "Invalid #<#{policy}> constructor is called"
     end
@@ -217,6 +217,16 @@ protected
     query ||= "#{action_name}?"
 
     @_pundit_policy_authorized = true
+=======
+  def authorize(record, query=nil, *args)
+    query ||= params[:action].to_s + "?"
+    @_policy_authorized = true
+
+    policy = policy(record, *args)
+    unless policy.public_send(query)
+      error = NotAuthorizedError.new("not allowed to #{query} this #{record}")
+      error.query, error.record, error.policy = query, record, policy
+>>>>>>> Added additional args parameter to policy instantiation to allow passing of a parent object for authorization
 
     policy = policy_class ? policy_class.new(pundit_user, record) : policy(record)
 
@@ -257,8 +267,8 @@ protected
   # @see https://github.com/varvet/pundit#policies
   # @param record [Object] the object we're retrieving the policy for
   # @return [Object, nil] instance of policy class with query methods
-  def policy(record)
-    policies[record] ||= Pundit.policy!(pundit_user, record)
+  def policy(record, *args)
+    policies[record] ||= Pundit.policy!(pundit_user, record, *args)
   end
 
   # Retrieves a set of permitted attributes from the policy by instantiating
