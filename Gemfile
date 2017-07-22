@@ -1,4 +1,16 @@
-source 'https://rubygems.org'
+source "https://rubygems.org"
 
-# Specify your gem's dependencies in pundit.gemspec
+ruby RUBY_VERSION
+
 gemspec
+
+group :development, :test do
+  gem "actionpack"
+  gem "activemodel"
+  gem "bundler"
+  gem "pry"
+  gem "rake"
+  gem "rspec"
+  gem "rubocop"
+  gem "yard"
+end

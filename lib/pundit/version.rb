@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Pundit
-  VERSION = "0.2.3"
+  VERSION = "1.1.0".freeze
 end
