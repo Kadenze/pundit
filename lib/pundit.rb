@@ -219,7 +219,7 @@ protected
   # @see https://github.com/elabs/pundit#policies
   # @param record [Object] the object we're retrieving the policy for
   # @return [Object, nil] instance of policy class with query methods
-  def policy(record)
+  def policy(record, *args)
     policies[record] ||= Pundit.policy!(pundit_user, record, *args)
   end
 
