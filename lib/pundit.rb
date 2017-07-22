@@ -158,6 +158,13 @@ module Pundit
     end
   end
 
+  # @api private
+  module Helper
+    def policy_scope(scope)
+      pundit_policy_scope(scope)
+    end
+  end
+
   included do
     helper Helper if respond_to?(:helper)
     if respond_to?(:helper_method)
