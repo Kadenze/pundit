@@ -220,22 +220,12 @@ protected
   # @param policy_class [Class] the policy class we want to force use of
   # @raise [NotAuthorizedError] if the given query method returned false
   # @return [Object] Always returns the passed object record
-  def authorize(record, query = nil, policy_class: nil)
+  def authorize(record, query = nil, *args, policy_class: nil)
     query ||= "#{action_name}?"
 
     @_pundit_policy_authorized = true
-=======
-  def authorize(record, query=nil, *args)
-    query ||= params[:action].to_s + "?"
-    @_policy_authorized = true
 
-    policy = policy(record, *args)
-    unless policy.public_send(query)
-      error = NotAuthorizedError.new("not allowed to #{query} this #{record}")
-      error.query, error.record, error.policy = query, record, policy
->>>>>>> Added additional args parameter to policy instantiation to allow passing of a parent object for authorization
-
-    policy = policy_class ? policy_class.new(pundit_user, record) : policy(record)
+    policy = policy_class ? policy_class.new(pundit_user, record, *args) : policy(record, *args)
 
     raise NotAuthorizedError, query: query, record: record, policy: policy unless policy.public_send(query)
 
