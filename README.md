@@ -116,7 +116,9 @@ and the given record. It then infers from the action name, that it should call
 `authorize` would have done something like this:
 
 ``` ruby
-raise "not authorized" unless PostPolicy.new(current_user, @post).update?
+unless PostPolicy.new(current_user, @post).update?
+  raise Pundit::NotAuthorizedError, "not allowed to update? this #{@post.inspect}"
+end
 ```
 
 You can pass a second argument to `authorize` if the name of the permission you
@@ -148,6 +150,15 @@ Controller:
 def admin_list
   authorize Post # we don't have a particular post to authorize
   # Rest of controller action
+end
+```
+
+`authorize` returns the object passed to it, so you can chain it like this:
+
+Controller:
+```ruby
+def show
+  @user = authorize User.find(params[:id])
 end
 ```
 
@@ -183,54 +194,6 @@ authorize :dashboard, :show?
   <%= link_to 'Dashboard', dashboard_path %>
 <% end %>
 ```
-
-## Ensuring policies are used
-
-Pundit adds a method called `verify_authorized` to your controllers. This
-method will raise an exception if `authorize` has not yet been called. You
-should run this method in an `after_action` to ensure that you haven't
-forgotten to authorize the action. For example:
-
-``` ruby
-class ApplicationController < ActionController::Base
-  after_action :verify_authorized
-end
-```
-
-Likewise, Pundit also adds `verify_policy_scoped` to your controller.  This
-will raise an exception in the vein of `verify_authorized`.  However, it tracks
-if `policy_scope` is used instead of `authorize`.  This is mostly useful for
-controller actions like `index` which find collections with a scope and don't
-authorize individual instances.
-
-``` ruby
-class ApplicationController < ActionController::Base
-  after_action :verify_authorized, except: :index
-  after_action :verify_policy_scoped, only: :index
-end
-```
-
-If you're using `verify_authorized` in your controllers but need to
-conditionally bypass verification, you can use `skip_authorization`. For
-bypassing `verify_policy_scoped`, use `skip_policy_scope`. These are useful
-in circumstances where you don't want to disable verification for the
-entire action, but have some cases where you intend to not authorize.
-
-```ruby
-def show
-  record = Record.find_by(attribute: "value")
-  if record.present?
-    authorize record
-  else
-    skip_authorization
-  end
-end
-```
-
-If you need to perform some more sophisticated logic or you want to raise a custom
-exception you can use the two lower level methods `pundit_policy_authorized?`
-and `pundit_policy_scoped?` which return `true` or `false` depending on whether
-`authorize` or `policy_scope` have been called, respectively.
 
 ## Scopes
 
@@ -322,6 +285,70 @@ You can, and are encouraged to, use this method in views:
 <% end %>
 ```
 
+## Ensuring policies and scopes are used
+
+When you are developing an application with Pundit it can be easy to forget to
+authorize some action. People are forgetful after all. Since Pundit encourages
+you to add the `authorize` call manually to each controller action, it's really
+easy to miss one.
+
+Thankfully, Pundit has a handy feature which reminds you in case you forget.
+Pundit tracks whether you have called `authorize` anywhere in your controller
+action. Pundit also adds a method to your controllers called
+`verify_authorized`. This method will raise an exception if `authorize` has not
+yet been called. You should run this method in an `after_action` hook to ensure
+that you haven't forgotten to authorize the action. For example:
+
+``` ruby
+class ApplicationController < ActionController::Base
+  include Pundit
+  after_action :verify_authorized
+end
+```
+
+Likewise, Pundit also adds `verify_policy_scoped` to your controller. This
+will raise an exception similar to `verify_authorized`. However, it tracks
+if `policy_scope` is used instead of `authorize`. This is mostly useful for
+controller actions like `index` which find collections with a scope and don't
+authorize individual instances.
+
+``` ruby
+class ApplicationController < ActionController::Base
+  include Pundit
+  after_action :verify_authorized, except: :index
+  after_action :verify_policy_scoped, only: :index
+end
+```
+
+**This verification mechanism only exists to aid you while developing your
+application, so you don't forget to call `authorize`. It is not some kind of
+failsafe mechanism or authorization mechanism. You should be able to remove
+these filters without affecting how your app works in any way.**
+
+Some people have found this feature confusing, while many others
+find it extremely helpful. If you fall into the category of people who find it
+confusing then you do not need to use it. Pundit will work just fine without
+using `verify_authorized` and `verify_policy_scoped`.
+
+### Conditional verification
+
+If you're using `verify_authorized` in your controllers but need to
+conditionally bypass verification, you can use `skip_authorization`. For
+bypassing `verify_policy_scoped`, use `skip_policy_scope`. These are useful
+in circumstances where you don't want to disable verification for the
+entire action, but have some cases where you intend to not authorize.
+
+```ruby
+def show
+  record = Record.find_by(attribute: "value")
+  if record.present?
+    authorize record
+  else
+    skip_authorization
+  end
+end
+```
+
 ## Manually specifying policy classes
 
 Sometimes you might want to explicitly declare which policy to use for a given
@@ -401,6 +428,10 @@ class ApplicationController < ActionController::Base
   end
 end
 ```
+
+Alternatively, you can globally handle Pundit::NotAuthorizedError's by having rails handle them as a 403 error and serving a 403 error page. Add the following to application.rb:
+
+```config.action_dispatch.rescue_responses["Pundit::NotAuthorizedError"] = :forbidden```
 
 ## Creating custom error messages
 
@@ -563,6 +594,23 @@ class PostsController < ApplicationController
   end
 end
 ```
+
+If you want to permit different attributes based on the current action, you can define a `permitted_attributes_for_#{action}` method on your policy:
+
+```ruby
+# app/policies/post_policy.rb
+class PostPolicy < ApplicationPolicy
+  def permitted_attributes_for_create
+    [:title, :body]
+  end
+
+  def permitted_attributes_for_edit
+    [:body]
+  end
+end
+```
+
+If you have defined an action-specific method on your policy for the current action, the `permitted_attributes` helper will call it instead of calling `permitted_attributes` on your controller.
 
 ## RSpec
 

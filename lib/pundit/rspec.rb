@@ -5,10 +5,11 @@ module Pundit
     module Matchers
       extend ::RSpec::Matchers::DSL
 
+      # rubocop:disable Metrics/BlockLength
       matcher :permit do |user, record|
         match_proc = lambda do |policy|
           @violating_permissions = permissions.find_all do |permission|
-            not policy.new(user, record).public_send(permission)
+            !policy.new(user, record).public_send(permission)
           end
           @violating_permissions.empty?
         end
@@ -22,14 +23,14 @@ module Pundit
 
         failure_message_proc = lambda do |policy|
           was_were = @violating_permissions.count > 1 ? "were" : "was"
-          "Expected #{policy} to grant #{permissions.to_sentence} on \
-          #{record} but #{@violating_permissions.to_sentence} #{was_were} not granted"
+          "Expected #{policy} to grant #{permissions.to_sentence} on " \
+          "#{record} but #{@violating_permissions.to_sentence} #{was_were} not granted"
         end
 
         failure_message_when_negated_proc = lambda do |policy|
           was_were = @violating_permissions.count > 1 ? "were" : "was"
-          "Expected #{policy} not to grant #{permissions.to_sentence} on \
-          #{record} but #{@violating_permissions.to_sentence} #{was_were} granted"
+          "Expected #{policy} not to grant #{permissions.to_sentence} on " \
+          "#{record} but #{@violating_permissions.to_sentence} #{was_were} granted"
         end
 
         if respond_to?(:match_when_negated)
@@ -71,12 +72,14 @@ end
 
 RSpec.configure do |config|
   if RSpec::Core::Version::STRING.split(".").first.to_i >= 3
-    config.include(Pundit::RSpec::PolicyExampleGroup,
+    config.include(
+      Pundit::RSpec::PolicyExampleGroup,
       type: :policy,
       file_path: %r{spec/policies}
     )
   else
-    config.include(Pundit::RSpec::PolicyExampleGroup,
+    config.include(
+      Pundit::RSpec::PolicyExampleGroup,
       type: :policy,
       example_group: { file_path: %r{spec/policies} }
     )

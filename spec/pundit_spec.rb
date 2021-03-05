@@ -334,6 +334,10 @@ describe Pundit do
       expect(controller.authorize(post)).to be_truthy
     end
 
+    it "returns the record on successful authorization" do
+      expect(controller.authorize(post)).to be(post)
+    end
+
     it "can be given a different permission to check" do
       expect(controller.authorize(post, :show?)).to be_truthy
       expect { controller.authorize(post, :destroy?) }.to raise_error(Pundit::NotAuthorizedError)
@@ -427,8 +431,8 @@ describe Pundit do
         admin: true
       })
 
-      expect(Controller.new(user, params).permitted_attributes(post)).to eq("title" => "Hello", "votes" => 5)
-      expect(Controller.new(double, params).permitted_attributes(post)).to eq("votes" => 5)
+      expect(Controller.new(user, params).permitted_attributes(post).to_h).to eq("title" => "Hello", "votes" => 5)
+      expect(Controller.new(double, params).permitted_attributes(post).to_h).to eq("votes" => 5)
     end
 
     it "checks policy for permitted attributes for record of a ActiveModel type" do
@@ -440,6 +444,13 @@ describe Pundit do
 
       expect(Controller.new(user, params).permitted_attributes(customer_post)).to eq("title" => "Hello", "votes" => 5)
       expect(Controller.new(double, params).permitted_attributes(customer_post)).to eq("votes" => 5)
+      expect(Controller.new(user, params).permitted_attributes(customer_post).to_h).to eq(
+        "title" => "Hello",
+        "votes" => 5
+      )
+      expect(Controller.new(double, params).permitted_attributes(customer_post).to_h).to eq(
+        "votes" => 5
+      )
     end
   end
 
@@ -452,7 +463,7 @@ describe Pundit do
         admin: true
       })
 
-      expect(Controller.new(user, params).permitted_attributes(post)).to eq("body" => "blah")
+      expect(Controller.new(user, params).permitted_attributes(post).to_h).to eq("body" => "blah")
     end
 
     it "can be explicitly set" do
@@ -463,7 +474,7 @@ describe Pundit do
         admin: true
       })
 
-      expect(Controller.new(user, params).permitted_attributes(post, :revise)).to eq("body" => "blah")
+      expect(Controller.new(user, params).permitted_attributes(post, :revise).to_h).to eq("body" => "blah")
     end
   end
 
